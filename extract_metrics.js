@@ -49,7 +49,7 @@ const measure = async (freebox, fmetrics) => {
 
   metrics_to_track.forEach(([n, t, ks, d]) =>
     ks.forEach(k =>
-      write(fmetrics, `${ts},${t},${n},${k},${d[k]}\n`)))
+      await write(fmetrics, `${ts},${t},${n},${k},${d[k]}\n`)))
 
   console.log(`${ts} - metrics written`)
   await freebox.logout()
