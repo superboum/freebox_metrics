@@ -24,7 +24,8 @@ Extracted
 ---------
 
 Data are extracted in a format that can be easily handled by [tidyverse libraries](https://www.tidyverse.org/).
-metric name is the oen from the API. Currently, I suppose that:
+
+Metric names is the one from the API. Currently, I suppose that:
 
   * `{tx,rx}_flows_rate` might refer to a number of packet/sec
   * `{tx,rx}_used_rate` may refer to the bandwidth currently used
@@ -65,4 +66,4 @@ date,type,name,metric,value
 Analyze
 -------
 
-*To be done. Come back later, I will probably use*
+*To be done. Come back later, I will probably commit some R files*
