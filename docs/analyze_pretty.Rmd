@@ -18,7 +18,7 @@ Puis nous chargeons les données générées par `extract_metrics.csv`.
 metrics <- read.csv(file="../metrics.csv", header=TRUE, sep=",")
 ```
 
-## Exploration des données
+## Requêtes sur les données
 
 Chaque minute, un ensemble de metriques est collecté. Voici ce qui a été collecté la première minute :
 
@@ -48,11 +48,11 @@ fieldLabel: 'Débit 4G Upload',
 name: 'tunnel.lte.tx_flows_rate',
 ```
 
-Il semble donc que pour la 4G, nous devrions nous concentrer sur `flows_rate` et sur `used_rate` pour le xDSL.
+Il semble donc que pour la 4G, nous devrions nous concentrer sur `flows_rate` et sur `used_rate` pour le xDSL pour avoir le débit instantané. Il semble que le `max_rate`, qui est le débit maximum du lien, n'ai de sens que pour le xDSL.
 
-À la vue de ces données et de leur signification, nous émettons l'hypothèse suivante :
+À la vue du premier ensemble de données collectées et de leur signification, nous émettons l'hypothèse suivante :
 
-> Hypothèse 1 : Le tunnel 4G a toujours ses valeurs de `flows_rate` à 0
+> Hypothèse 1 : Le tunnel 4G a toujours ses valeurs de `flows_rate` à 0 - autrement dit, aucun trafic ne passe jamais par le tunnel 4G
 
 Pour tester cette hypothèse, nous lançons la requête suivante :
 
@@ -67,9 +67,9 @@ lte_above_zero <- sqldf("
 lte_above_zero
 ```
 
-L'**Hypothèse 1 est donc fausse**, nous avons eu un instant où la valeur n'était pas nulle pour le `flows_rate`.
+L'**Hypothèse 1 est fausse** car nous avons eu un instant où la valeur n'était pas nulle pour le `flows_rate` - le tunnel 4G a donc été utilisé.
 
-Nous allons nous intéresser à la configuration de la radio à ce moment où la 4G a fonctionné :
+Nous allons nous intéresser à la configuration de la radio au moment où la 4G a fonctionné :
 
 ```{r}
 lte_up <- sqldf("
@@ -82,7 +82,7 @@ lte_up
 
 Nous constatons que les deux canaux sont activés au moment où nous avons eu des données sur le lien 4G.
 
-> Hypothèse 2 : Quand les deux canaux sont activés, les valeurs de `flows_rate` pour la 4G ne sont jamais nulles.
+> Hypothèse 2 : Quand les deux canaux sont activés, les valeurs de `flows_rate` pour la 4G ne sont jamais nulles - autrement dit, quand les deux canaux sont connectés, de la donnée passe forcément sur le tunnel 4G.
 
 Que nous pouvons vérifier à l'aide de la commande suivante :
 
@@ -97,9 +97,9 @@ select distinct metrics.date, IFNULL(l.data_in_tunnel,0) as data_in_tunnel from 
 both_channels
 ```
 
-Nous avons donc 6 mesures où les deux canaux sont activés mais où aucune donnée ne transitent par le tunnel. L'**Hypothèse 2** est donc également fausse...
+Nous avons donc 6 mesures où les deux canaux sont activés mais où aucune donnée ne transitent par le tunnel. L'**Hypothèse 2** est donc également fausse... Ce qui peut être expliqué par le fait qu'il n'y avait pas beaucoup de trafic à ce moment.
 
-> Hypothèse 3 : Quand les deux canaux ne sont pas activés, les valeurs de `flows_rate` pour la 4G sont toujours nulles.
+> Hypothèse 3 : Quand les deux canaux ne sont pas activés, les valeurs de `flows_rate` pour la 4G sont toujours nulles - autrement dit, si seulement un canal est activé, le tunnel 4G n'est pas utilisé quoi qu'il arrive.
 
 Bien que nous ayons déjà la réponse, pour exposer les choses clairement :
 
@@ -113,7 +113,10 @@ select distinct date from metrics
 ")
 one_channel
 ```
+
 L'**Hypothèse 3** est donc vraie.
+
+## Exploration des données
 
 Les identifiants de bande de fréquences de Free sont (extrait depuis le javascript de l'interface) :
 
@@ -129,9 +132,39 @@ strings: {
 }
 ```
 
+L'antenne à côté de chez moi référence les fréquences suivantes :
 
+  * LTE 1750 à 1765 MHz
+  * LTE 1845 à 1860 MHz
+  * LTE 2550 à 2570 MHz
+  * LTE 2670 à 2690 MHz
+  
+Comment comparer ces fréquences avec celles affichées dans l'interface de Free ?
 
-## Affichage des données
+Maintenant regardons les fréquences "vues" par notre freebox :
+
+```{r}
+frequencies_map <- data.frame(
+  "internal_code" = c(0, 7, 3, 28),
+  "pretty_name" = c("Down", "2600 MHz", "1800MHz", "700 MHz")
+)
+
+sqldf("
+  select 
+    name as Canal,
+    pretty_name as Fréquence,
+    count(date) as Occurences 
+  from metrics, frequencies_map 
+  where 
+    metric = 'band' and 
+    value = internal_code 
+  group by name,value
+")
+```
+
+Le canal 0 arrive donc bien à se connecter à la fréquence 1800MHz mais le canal 1 a du mal à maintenir un lien sur le fréquence des 2600 Mhz.
+
+Si on s'intéresse aux différentes métriques d'un lien 4G : RSSI, RSRP et RSRQ seulement pour les occurences où les deux liens étaient fonctionnels, on obtient :
 
 ```{r}
 two_channels = sqldf("
@@ -143,12 +176,18 @@ two_channels = sqldf("
       (metric = 'rsrq' or metric = 'rsrp' or metric = 'rssi') 
 ")
 
-ggplot(data = two_channels, aes(x=date, y=v, group=name:metric, color=metric, linetype=name)) +
-  geom_line() +
+ggplot(data = two_channels, aes(x=date, y=v, group=name:metric, color=metric, shape=name)) +
+  geom_point() +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 ```
 
+Les valeurs ont l'air stables sur les 7 relevés. Les valeurs du canal 1 semblent toujours un peu en dessous de celles du canal 0, et doit donc être à la limite de la déconnexion.
+
+
 ## Conclusions
 
+Conclusions principales :
 
+  1. L'aggrégation 4G n'est utilisée que si les deux canaux sont connectés
+  2. La Freebox a du mal à se connecter au second canal de fréquence 2600 MHz
