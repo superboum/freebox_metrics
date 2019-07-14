@@ -47,8 +47,8 @@ const measure = async (freebox, fmetrics) => {
     ['canal 1', 'radio', radio_keys, response.data.result.radio.bands[1]]
   ]
 
-  metrics_to_track.forEach(([n, t, ks, d]) =>
-    ks.forEach(k =>
+  await metrics_to_track.forEach(async ([n, t, ks, d]) =>
+    await ks.forEach(async k =>
       await write(fmetrics, `${ts},${t},${n},${k},${d[k]}\n`)))
 
   console.log(`${ts} - metrics written`)

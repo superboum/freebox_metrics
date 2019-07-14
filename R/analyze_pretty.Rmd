@@ -1,0 +1,152 @@
+---
+title: "Freebox 4G debug"
+output:
+  html_document:
+    df_print: paged
+---
+
+Nous allons utiliser `sqldf` pour manipuler les données et `ggplot2` pour les afficher.
+
+```{r message=FALSE}
+library('sqldf')
+library('ggplot2')
+```
+
+Puis nous chargeons les données générées par `extract_metrics.csv`.
+
+```{r}
+metrics <- read.csv(file="../metrics.csv", header=TRUE, sep=",")
+```
+
+## Exploration des données
+
+Chaque minute, un ensemble de metriques est collecté. Voici ce qui a été collecté la première minute :
+
+```{r}
+sqldf('select * from metrics where date = (select date from metrics order by date asc limit 1)')
+```
+
+L'interface de la freebox affiche les données suivantes (extrait depuis le javascript de l'interface) :
+
+```
+fieldLabel: 'Lien xDSL',
+name: 'tunnel.xdsl.connected',
+
+fieldLabel: 'Débit xDSL Download',
+name: 'tunnel.xdsl.rx_used_rate',
+
+fieldLabel: 'Débit xDSL Upload',
+name: 'tunnel.xdsl.tx_used_rate',
+
+fieldLabel: 'Lien 4G',
+name: 'tunnel.lte.connected',
+
+fieldLabel: 'Débit 4G Download',
+name: 'tunnel.lte.rx_flows_rate',
+
+fieldLabel: 'Débit 4G Upload',
+name: 'tunnel.lte.tx_flows_rate',
+```
+
+Il semble donc que pour la 4G, nous devrions nous concentrer sur `flows_rate` et sur `used_rate` pour le xDSL.
+
+À la vue de ces données et de leur signification, nous émettons l'hypothèse suivante :
+
+> Hypothèse 1 : Le tunnel 4G a toujours ses valeurs de `flows_rate` à 0
+
+Pour tester cette hypothèse, nous lançons la requête suivante :
+
+```{r}
+lte_above_zero <- sqldf("
+  select * 
+  from metrics 
+  where type='tunnel' 
+    and name='lte' 
+    and metric LIKE '%_flows_rate' 
+    and value != 0 ")
+lte_above_zero
+```
+
+L'**Hypothèse 1 est donc fausse**, nous avons eu un instant où la valeur n'était pas nulle pour le `flows_rate`.
+
+Nous allons nous intéresser à la configuration de la radio à ce moment où la 4G a fonctionné :
+
+```{r}
+lte_up <- sqldf("
+  select * 
+  from metrics 
+  where type = 'radio' 
+    and date in (select date from lte_above_zero)")
+lte_up
+```
+
+Nous constatons que les deux canaux sont activés au moment où nous avons eu des données sur le lien 4G.
+
+> Hypothèse 2 : Quand les deux canaux sont activés, les valeurs de `flows_rate` pour la 4G ne sont jamais nulles.
+
+Que nous pouvons vérifier à l'aide de la commande suivante :
+
+```{r}
+both_channels <- sqldf("
+select distinct metrics.date, IFNULL(l.data_in_tunnel,0) as data_in_tunnel from metrics 
+  left join (select date, 1 as data_in_tunnel from lte_up) as l on metrics.date = l.date 
+  where 
+      metrics.date in (select date from metrics where name = 'canal 0' and value = 'true') and
+      metrics.date in (select date from metrics where name = 'canal 1' and value = 'true')
+")
+both_channels
+```
+
+Nous avons donc 6 mesures où les deux canaux sont activés mais où aucune donnée ne transitent par le tunnel. L'**Hypothèse 2** est donc également fausse...
+
+> Hypothèse 3 : Quand les deux canaux ne sont pas activés, les valeurs de `flows_rate` pour la 4G sont toujours nulles.
+
+Bien que nous ayons déjà la réponse, pour exposer les choses clairement :
+
+```{r}
+one_channel <- sqldf("
+select distinct date from metrics
+  where 
+      (metrics.date in (select date from metrics where name = 'canal 0' and value = 'false') or
+       metrics.date in (select date from metrics where name = 'canal 1' and value = 'false')) and
+      metrics.date in (select date from lte_up)
+")
+one_channel
+```
+L'**Hypothèse 3** est donc vraie.
+
+Les identifiants de bande de fréquences de Free sont (extrait depuis le javascript de l'interface) :
+
+```
+xtype: 'enumdisplayfield',
+fieldLabel: 'Bande de fréquence',
+name: 'radio.bands.0.band',
+ttip: 'État du modem 4G',
+strings: {
+7: '2600 MHz',
+3: '1800 MHz',
+28: '700 MHz'
+}
+```
+
+## Affichage des données
+
+```{r}
+two_channels = sqldf("
+  select metric,CAST(value as integer) as v,name,date
+  from metrics 
+  where 
+      metrics.date in (select date from metrics where name = 'canal 0' and value = 'true') and
+      metrics.date in (select date from metrics where name = 'canal 1' and value = 'true') and
+      (metric = 'rsrq' or metric = 'rsrp' or metric = 'rssi') 
+")
+
+ggplot(data = two_channels, aes(x=date, y=v, group=name:metric, color=metric, linetype=name)) +
+  geom_line() +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+## Conclusions
+
+
