@@ -129,6 +129,8 @@ strings: {
 }
 ```
 
+
+
 ## Affichage des données
 
 ```{r}
