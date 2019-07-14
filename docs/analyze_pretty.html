@@ -1652,7 +1652,7 @@ library('ggplot2')</code></pre>
 {"columns":[{"label":["date"],"name":[1],"type":["fctr"],"align":["left"]},{"label":["type"],"name":[2],"type":["fctr"],"align":["left"]},{"label":["name"],"name":[3],"type":["fctr"],"align":["left"]},{"label":["metric"],"name":[4],"type":["fctr"],"align":["left"]},{"label":["value"],"name":[5],"type":["fctr"],"align":["left"]}],"data":[{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"lte","4":"connected","5":"true"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"lte","4":"rx_flows_rate","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"lte","4":"tx_flows_rate","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"lte","4":"rx_used_rate","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"lte","4":"tx_used_rate","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"lte","4":"rx_max_rate","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"lte","4":"tx_max_rate","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"xdsl","4":"connected","5":"true"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"xdsl","4":"rx_flows_rate","5":"577"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"xdsl","4":"tx_flows_rate","5":"157"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"xdsl","4":"rx_used_rate","5":"977"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"xdsl","4":"tx_used_rate","5":"457"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"xdsl","4":"rx_max_rate","5":"2036500"},{"1":"2019-07-13T15:59:28.589Z","2":"tunnel","3":"xdsl","4":"tx_max_rate","5":"130625"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 0","4":"enabled","5":"true"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 0","4":"bandwidth","5":"15"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 0","4":"rsrq","5":"-7"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 0","4":"rsrp","5":"-107"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 0","4":"rssi","5":"-81"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 0","4":"band","5":"3"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 0","4":"pci","5":"80"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 1","4":"enabled","5":"false"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 1","4":"bandwidth","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 1","4":"rsrp","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 1","4":"rsrq","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 1","4":"rssi","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 1","4":"band","5":"0"},{"1":"2019-07-13T15:59:28.589Z","2":"radio","3":"canal 1","4":"pci","5":"0"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
-<p>L’interface de la freebox affiche les données suivantes :</p>
+<p>L’interface de la freebox affiche les données suivantes (extrait depuis le javascript de l’interface) :</p>
 <pre><code>fieldLabel: 'Lien xDSL',
 name: 'tunnel.xdsl.connected',
 
@@ -1739,7 +1739,7 @@ one_channel</code></pre>
   </script>
 </div>
 <p>L’<strong>Hypothèse 3</strong> est donc vraie.</p>
-<p>Les identifiants de bande de fréquences de Free :</p>
+<p>Les identifiants de bande de fréquences de Free sont (extrait depuis le javascript de l’interface) :</p>
 <pre><code>xtype: 'enumdisplayfield',
 fieldLabel: 'Bande de fréquence',
 name: 'radio.bands.0.band',
@@ -1747,7 +1747,8 @@ ttip: 'État du modem 4G',
 strings: {
 7: '2600 MHz',
 3: '1800 MHz',
-28: '700 MHz'</code></pre>
+28: '700 MHz'
+}</code></pre>
 </div>
 <div id="affichage-des-donnees" class="section level2">
 <h2>Affichage des données</h2>
